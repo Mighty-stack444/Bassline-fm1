@@ -1,0 +1,58 @@
+# Bassline: the count-in, ENV slides, Retrig mode, MIDI in, the arp recorded into the loop
+wait 200
+# Retrig (Glide page, KNOB 2 to the left): overlapping notes each start again
+tap FX
+expect view 1
+spin K2 -1
+expect par5 0
+key 7 down
+wait 20
+key 9 down
+wait 20
+expect note 38
+key 9 up
+key 7 up
+# ENV held: a slide into the note, whatever the mode
+key 7 down
+wait 30
+press ENV
+key 14 down
+wait 30
+release ENV
+expect note 43
+key 14 up
+key 7 up
+wait 50
+spin K2 1
+# MIDI in: a note plays (snap off), pitch bend is taken
+midi 90 1C 64
+wait 20
+expect note 28
+midi E0 00 60
+midi 80 1C 00
+midi E0 00 40
+wait 20
+expect note 0
+# count-in: 1 bar of clicks (90 BPM: 2.67 s), then recording from the top
+tap REC
+tap PLAY
+wait 50
+expect counting >0
+expect playing 0
+wait 2700
+expect playing 1
+expect recording 1
+# the arp, recorded: Octave pattern, 8ths, on C2 for a bar
+tap EDIT
+tap EDIT
+expect view 3
+tap EDIT
+spin K1 2
+expect par12 2
+key 7 down
+wait 2600
+key 7 up
+tap PLAY
+expect playing 0
+expect nnotes >5
+shot arp_rec.png

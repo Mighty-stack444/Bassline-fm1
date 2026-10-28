@@ -1,0 +1,191 @@
+# every sound (from Finger, the default, round to 808): C2, slide (legato) to G2, then a low F1 held; its peak level
+wait 100
+expect par23 1
+peakreset
+wav sound0.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 2
+peakreset
+wav sound1.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 3
+peakreset
+wav sound2.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 4
+peakreset
+wav sound3.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 5
+peakreset
+wav sound4.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 6
+peakreset
+wav sound5.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 7
+peakreset
+wav sound6.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 8
+peakreset
+wav sound7.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 9
+peakreset
+wav sound8.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+turn PRESET 1
+expect par23 0
+peakreset
+wav sound9.wav
+key 7 down
+wait 500
+key 14 down
+wait 30
+key 7 up
+wait 600
+key 14 up
+wait 300
+key 0 down
+wait 900
+key 0 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20

@@ -1,0 +1,161 @@
+# Bassline: playing, legato, step entry, the loop, live recording, undo, clear, suggestions, snap, fill,
+# the arp, saving. Keys: key K is MIDI 29 + K at the default octave (key 0 is F1, key 7 C2).
+wait 200
+expect view 0
+shot boot.png
+# a key plays; a second key held slides there (legato), and back when it is let go
+key 7 down
+wait 20
+expect note 36
+key 9 down
+wait 20
+expect note 38
+key 9 up
+wait 20
+expect note 36
+key 7 up
+wait 20
+expect note 0
+# ---- step entry: REC while stopped
+tap REC
+expect stepmode 1
+expect cursor 0
+tapkey 7
+expect pat0 36
+expect plen0 1
+expect cursor 1
+# notes an 8th long (Setup page, KNOB 1)
+tap GLO
+spin K1 1
+expect par15 1
+tapkey 10
+expect pat1 39
+expect plen1 2
+expect cursor 3
+# LFO: a rest
+tap LFO
+expect cursor 5
+# ENV held with a key: a slide into it
+press ENV
+tapkey 12
+release ENV
+expect pat5 41
+expect pglide5 1
+expect cursor 7
+shot step.png
+# ENV alone: a tie (the note before lasts longer)
+tap ENV
+expect plen5 4
+expect cursor 9
+tap REC
+expect stepmode 0
+# ---- the loop plays it (90 BPM: a step is 167 ms)
+tap PLAY
+expect playing 1
+expect note 36
+wait 170
+expect note 39
+wait 1000
+shot playing.png
+tap PLAY
+expect playing 0
+# ---- live recording: count-in off (Setup, KNOB 2), REC then PLAY
+spin K2 -1
+expect par16 0
+tap REC
+tap PLAY
+expect recording 1
+wait 600
+key 14 down
+wait 333
+key 14 up
+expect pat4 43
+expect plen4 2
+shot rec.png
+tap PLAY
+expect recording 0
+# LFO: undo, and again: redo
+tap LFO
+expect pat4 0
+tap LFO
+expect pat4 43
+# LFO held: the loop cleared; LFO: undo
+press LFO
+wait 1600
+release LFO
+expect nnotes 0
+tap LFO
+expect pat4 43
+# ---- a bass line in C minor, quarter notes: C C G C | Ab Ab Eb Ab
+press LFO
+wait 1600
+release LFO
+spin K1 1
+expect par15 2
+tap REC
+tapkey 7
+tapkey 7
+tapkey 2
+tapkey 7
+tapkey 3
+tapkey 3
+tapkey 10
+tapkey 3
+tap REC
+expect pat0 36
+expect pat16 32
+expect plen16 4
+# the Suggest page (EDIT from Arp): bar 1 is i (Cm), bar 2 VI (Ab)
+tap SEL
+tap EDIT
+tap EDIT
+expect view 5
+expect sugdeg0 0
+expect sugdeg1 5
+shot suggest.png
+# KNOB 3 to the left: the best suggestions become the progression
+turn K3 -1
+expect prog0 1
+expect prog1 6
+# the Prog page: Snap to the chord; C# on bar 1 (Cm) is pulled to C
+tap SEL
+expect view 3
+spin K4 2
+expect par19 2
+key 8 down
+wait 20
+expect note 36
+key 8 up
+shot prog.png
+spin K4 -2
+# ---- Fill: the Arp page, Root-5th in 8ths, KNOB 4
+tap EDIT
+expect view 4
+spin K1 3
+expect par12 3
+turn K4 1
+expect pat0 36
+expect pat2 43
+expect pat16 32
+expect pat18 39
+shot fill.png
+# the arp on a held key: Root-5th on C2
+key 7 down
+wait 30
+expect arp 1
+expect note 36
+wait 333
+expect note 43
+key 7 up
+wait 30
+expect arp 0
+tap ARP
+expect par12 0
+# ---- it saves by itself when quiet, and comes back after a restart
+wait 5000
+expect dirty 0
+reboot
+wait 100
+expect pat18 39
+expect prog1 6
+shot after_reboot.png
