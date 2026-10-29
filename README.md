@@ -5,8 +5,9 @@ the start of an arrangement that a progression can be built from.
 
 - **Ten basses**, all generated, no samples: 808, Finger, Pick, Slap, Muted, Fretless, Upright (plucked-string
   models), Acid, Sub, Reese.
-- **One note at a time, with glide and legato**: hold a key and press another to slide there; ENV forces a slide;
-  the 808 dives into its notes.
+- **One note at a time, with glide and legato**: hold a key and press another to slide there; ENV forces a slide.
+- **Shaped and bent**: the 808's punch, dive and dive time; four kinds of drive (warm, hard clip, wavefold, fuzz);
+  a tail that drops the note when you let go; a Bend knob that bends live and springs back; a tempo-synced wobble.
 - **A loop of 1–8 bars**, recorded live (quantized to 16ths, over what's there) or entered step by step, with undo.
 - **A progression**, one chord per bar from the key. The keys light up with the bar's chord, and Snap can pull wrong
   notes into the scale or the chord.
@@ -36,14 +37,16 @@ theirs. The instrument and the UI are new.
 | LFO | Undo the last recording, step entry, fill or clear (again: redo). Held 1.5 s: clear. Step entry: a rest |
 | ARP | The bass arpeggiator on / off |
 | SELECT / ALGORITHM / PRESETS | Scale (step entry: the cursor) / root / sound |
-| HOME FX SEQ SEL GLO | Pages Sound, Glide, Loop, Prog, Setup. EDIT steps through all seven (with Arp and Suggest) |
+| HOME FX SEQ SEL GLO | Pages Sound, Glide, Loop, Prog, Setup. EDIT steps through all nine (with Shape, Bend, Arp and Suggest) |
 | KNOB 1–4 | The page's four values |
 | SAVE | Saves the loop, the progression and the settings (it also saves by itself when stopped and quiet) |
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | Sound | Tone | Decay | Drive | Level |
+| Shape | Punch (the 808's hit, semitones) | Dive time | Character: Warm, Hard, Fold, Fuzz (the Drive's kind) | Tail (the note drops this far when let go) |
 | Glide | Glide (time) | Mode: Retrig, Legato, Glide all | Slide (ENV's time) | Dive (808 dive; a scoop on the others) |
+| Bend | Bend (turn: bends live, half a step a detent, up to an octave) | Return (how fast it springs back; Hold: it stays) | Wobble (a vibrato) | Rate (in time with the tempo) |
 | Loop | Bars | Tempo | Swing | Click: off, while recording, always |
 | Prog | Bar | Chord (scale degree) | 7th | Snap: off, scale, chord |
 | Arp | Pattern | Rate | Gate | Fill loop (turn) |

@@ -196,6 +196,8 @@ static const om_param_t PARAMS[P_NPARAMS] = {
     {"Pattern", 0, NARPPAT - 1, 0}, {"Rate", 0, 3, 1}, {"Gate", 10, 100, 60},  {"Step", 0, 3, 0},
     {"Count-in", 0, 2, 1},    {"MIDI out", 0, 1, 1},   {"Tune", -50, 50, 0},   {"Snap", 0, 2, 0},
     {"Scale", 0, NSCALES - 1, 1}, {"Root", 0, 11, 0},  {"Octave", -3, 0, -2},  {"Sound", 0, NSOUNDS - 1, 1},
+    {"Punch", 0, 24, 4},      {"Dive time", 0, 100, 30}, {"Character", 0, 3, 0}, {"Tail", 0, 24, 0},
+    {"Return", 0, 100, 20},   {"Wobble", 0, 100, 0},   {"Rate", 0, 5, 2},
 };
 const om_param_t *om_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -240,8 +242,16 @@ void om_param_text(int i, int v, char *b)
     static const char *const CIN[3] = {"Off", "1 bar", "2 bars"};
     static const char *const SNAP[3] = {"Off", "Scale", "Chord"};
     static const char *const ONOFF[2] = {"Off", "On"};
+    static const char *const CHARN[4] = {"Warm", "Hard", "Fold", "Fuzz"};
+    static const char *const WRATE[6] = {"1/2", "1/4", "1/8", "1/8T", "1/16", "1/32"};
     const char *s = 0;
+    if (i == P_RETURN && v == 0) {
+        copy_s(b, "Hold");
+        return;
+    }
     switch (i) {
+    case P_CHAR: s = CHARN[v & 3]; break;
+    case P_WRATE: s = WRATE[v % 6]; break;
     case P_MODE: s = MODE[v % 3]; break;
     case P_ARPRATE: s = RATE[v & 3]; break;
     case P_STEPLEN: s = STEP[v & 3]; break;
@@ -259,9 +269,10 @@ void om_param_text(int i, int v, char *b)
         copy_s(b, s);
         return;
     }
-    if (i == P_GLIDE || i == P_SLIDE) {          /* milliseconds */
+    if (i == P_GLIDE || i == P_SLIDE || i == P_DIVETIME || i == P_RETURN) {   /* milliseconds */
         float f = (float)v * 0.01f;
-        int ms = (int)((0.005f + f * f) * 1000.0f + 0.5f);
+        int ms = (int)((i == P_DIVETIME ? 0.02f + 1.5f * f * f : i == P_RETURN ? 0.03f + 2.0f * f * f
+                                                                                 : 0.005f + f * f) * 1000.0f + 0.5f);
         itoa_s(ms, b);
         while (*b)
             b++;
@@ -280,10 +291,12 @@ void om_param_text(int i, int v, char *b)
     }
     if ((i == P_TUNE || i == P_OCTAVE) && v > 0)
         *b++ = '+';
-    if (i == P_DIVE && v > 0)
+    if ((i == P_DIVE || i == P_PUNCH) && v > 0)
         *b++ = '+';
+    if (i == P_TAIL && v > 0)
+        *b++ = '-';
     itoa_s(v, b);
-    if (i == P_DIVE && v) {
+    if ((i == P_DIVE || i == P_PUNCH || i == P_TAIL) && v) {
         while (*b)
             b++;
         b[0] = ' ';
@@ -291,7 +304,7 @@ void om_param_text(int i, int v, char *b)
         b[2] = 't';
         b[3] = 0;
     }
-    if (i == P_TONE || i == P_DECAY || i == P_DRIVE || i == P_LEVEL || i == P_ARPGATE) {
+    if (i == P_TONE || i == P_DECAY || i == P_DRIVE || i == P_LEVEL || i == P_ARPGATE || i == P_WOBBLE) {
         while (*b)
             b++;
         b[0] = '%';
@@ -300,7 +313,7 @@ void om_param_text(int i, int v, char *b)
 }
 
 /* ============================================================ commands === */
-enum { C_SET, C_NOTE, C_PLAY, C_REC, C_BEND, C_PANIC };
+enum { C_SET, C_NOTE, C_PLAY, C_REC, C_BEND, C_PANIC, C_KBEND };
 #define QN 128u
 static uint32_t q[QN];
 static volatile uint32_t q_w, q_r;
@@ -318,6 +331,7 @@ void om_note(int n, int on, int src, int slide) { post(C_NOTE, n, (on ? 1 : 0) |
 void om_play(int on, int rec, int cin) { post(C_PLAY, on, (rec ? 1 : 0) | (cin & 3) << 1); }
 void om_rec(int on) { post(C_REC, on, 0); }
 void om_bend(int cents) { post(C_BEND, 0, cents); }
+void om_knob_bend(int cents) { post(C_KBEND, 0, cents); }
 void om_panic(void) { post(C_PANIC, 0, 0); }
 
 /* =============================================================== state === */
@@ -327,7 +341,7 @@ volatile float om_step_frac, om_level, om_env;
 volatile uint32_t om_rec_writes;
 
 static int16_t par[P_NPARAMS];
-static float tunefac = 1.0f, bend = 0.0f;
+static float tunefac = 1.0f, bend = 0.0f, kbend = 0.0f, wob_ph;
 
 static void midi(uint32_t st, uint32_t d1, uint32_t d2)
 {
@@ -380,6 +394,7 @@ static struct {
     float pitch, target, gk;                   /* pitch in semitones; glide toward target */
     float env, att_k;                          /* amplitude */
     float punch, dive;                         /* 808 punch, dive (or scoop) envelopes, 1 -> 0 */
+    float tail;                                /* the tail's drop after the note is let go, 0 -> 1 */
     float ph, ph2, ph3;
     float f1, f2, f3, f4, fenv, acc;           /* acid's filter and its envelope */
     float lp, ks_w_f;                          /* the string's loop lowpass */
@@ -396,8 +411,9 @@ static float note_hz(float p) { return 440.0f * tunefac * fm_exp2f((p - 69.0f) *
 
 static void voice_coefs(void)
 {
+    float dt = (float)par[P_DIVETIME] * 0.01f;
     k_punch = tc_coef(0.012f);
-    k_dive = tc_coef(sound == S_808 ? 0.16f : 0.05f);
+    k_dive = tc_coef((0.02f + 1.5f * dt * dt) * (sound == S_808 ? 0.5f : 0.3f));   /* the time to near 0 */
     k_fenv = tc_coef(0.06f + 1.0f * (float)par[P_DECAY] * (float)par[P_DECAY] * 1e-4f);
     k_pop = tc_coef(0.012f);
     k_mw = tc_coef(0.22f);
@@ -453,6 +469,7 @@ static void voice_go(int note, int retrig, int glide, float gtime, int acc)
     midi(0x90, (uint32_t)note, acc ? 120 : 96);
     if (retrig || vo.st == E_OFF || vo.st == E_REL) {
         vo.punch = 1.0f;
+        vo.tail = 0.0f;
         vo.dive = 1.0f;
         vo.fenv = 1.0f;
         vo.pop = 1.0f;
@@ -485,9 +502,15 @@ static void tick_coefs(void)
 {
     float decay = (float)par[P_DECAY] * 0.01f, tone = (float)par[P_TONE] * 0.01f, p, hz, t_hold, t_rel;
     vo.pitch += (vo.target - vo.pitch) * vo.gk;
-    p = vo.pitch + bend;
+    p = vo.pitch + bend + kbend - (float)par[P_TAIL] * vo.tail;
+    if (par[P_WOBBLE]) {                            /* the wobble: a vibrato in time with the tempo */
+        static const float BEATS[6] = {2.0f, 1.0f, 0.5f, 1.0f / 3.0f, 0.25f, 0.125f};
+        float w = (float)par[P_WOBBLE] * 0.01f;
+        p += 2.0f * w * w * tsin(wob_ph);
+        wob_ph = wrap1(wob_ph + 16.0f * (float)par[P_TEMPO] / (60.0f * OM_SR * BEATS[par[P_WRATE] % 6]));
+    }
     if (sound == S_808)
-        p += 4.0f * vo.punch + (float)par[P_DIVE] * vo.dive;
+        p += (float)par[P_PUNCH] * vo.punch + (float)par[P_DIVE] * vo.dive;
     else if (par[P_DIVE])
         p -= (float)par[P_DIVE] * 0.5f * vo.dive;   /* a scoop up into the note */
     hz = note_hz(p);
@@ -502,6 +525,8 @@ static void tick_coefs(void)
     }
     /* one trip round the loop loses what this many samples of decay would */
     vo.k_hold = fm_exp2f(-9.9658f * vo.len / (t_hold * OM_SR));
+    if (par[P_TAIL])                                /* a tail: the note rings on as it drops */
+        t_rel = fm_maxf(t_rel, 0.35f);
     vo.k_rel = fm_exp2f(-9.9658f * vo.len / (t_rel * OM_SR));
     switch (sound) {                                /* the loop's brightness */
     case S_MUTED: vo.k_lp = 0.25f + 0.25f * tone; break;
@@ -542,7 +567,7 @@ static void render_voice(uint32_t n)
 {
     uint32_t j;
     float decay = (float)par[P_DECAY] * 0.01f, tone = (float)par[P_TONE] * 0.01f;
-    const float rel_osc = t60_coef(sound == S_808 ? 0.09f : 0.06f);
+    const float rel_osc = t60_coef(par[P_TAIL] ? 0.45f : sound == S_808 ? 0.09f : 0.06f);
     float t808 = 0.15f + 4.0f * decay * decay, k808 = t60_coef(t808);
     float sus = sound == S_ACID ? 1.0f : 0.25f + 0.75f * decay, k_sus = tc_coef(0.4f);
     for (j = 0; j < n; j++)
@@ -557,6 +582,8 @@ static void render_voice(uint32_t n)
             tick_coefs();
             vo.punch -= vo.punch * k_punch * 16.0f;
             vo.dive -= vo.dive * fm_minf(k_dive * 16.0f, 1.0f);
+            if (vo.st == E_REL)                     /* the tail drops over about 0.15 s */
+                vo.tail += (1.0f - vo.tail) * 0.004f;
             vo.fenv -= vo.fenv * fm_minf(k_fenv * 16.0f, 1.0f);
             vo.pop -= vo.pop * fm_minf(k_pop * 16.0f, 1.0f);
             vo.mw -= vo.mw * fm_minf(k_mw * 16.0f, 1.0f);
@@ -955,7 +982,7 @@ static void apply(int p, int v)
         vo.f1 = vo.f2 = vo.f3 = vo.f4 = 0.0f;
         voice_coefs();
         break;
-    case P_DECAY: voice_coefs(); break;
+    case P_DECAY: case P_DIVETIME: voice_coefs(); break;
     case P_DRIVE: {
         float d = (float)v * 0.01f;
         drive_g = 1.0f + 9.0f * d * d;
@@ -1045,6 +1072,7 @@ static void drain(void)
             om_recording = (uint8_t)recording;
             break;
         case C_BEND: bend = (float)b * 0.01f; break;
+        case C_KBEND: kbend = (float)b * 0.01f; break;
         case C_PANIC: quiet(); break;
         }
     }
@@ -1115,7 +1143,19 @@ void om_render(int32_t *out, uint32_t n, uint32_t gain_q12)
         render_voice(k);
         for (j = 0; j < k; j++) {
             float x = mono[j], y;
-            x = fm_tanhf(x * drive_g) * drive_n * lvl;
+            switch (par[P_CHAR]) {                  /* the drive's character */
+            case CHAR_HARD: x = fm_clampf(x * drive_g, -0.8f, 0.8f) * 1.25f * drive_n * fm_tanhf(drive_g); break;
+            case CHAR_FOLD: {                       /* a wavefolder: the louder, the more it folds over */
+                float u = x * drive_g;
+                x = fm_sinf(u * (FM_PI * 0.5f)) * (1.0f - 0.3f * (drive_g - 1.0f) / 9.0f);
+                break;
+            }
+            case CHAR_FUZZ:                          /* lopsided: even harmonics, a growl */
+                x = (fm_tanhf(x * drive_g + 0.35f) - 0.3364f) * drive_n;
+                break;
+            default: x = fm_tanhf(x * drive_g) * drive_n; break;
+            }
+            x *= lvl;
             y = x - dc_x + 0.9993f * dc_y;          /* DC out (~5 Hz) */
             dc_x = x;
             dc_y = fm_flush(y);

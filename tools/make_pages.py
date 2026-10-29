@@ -75,7 +75,7 @@ ul.pages b { color: var(--teal); }
 <main>
 <h1>BASSLINE</h1>
 <p class="lede">Bass lines for the M-VAVE FM-1. Ten basses (an 808, finger, pick, slap, muted, fretless,
-upright, acid, sub and reese), played one note at a time with glide and legato; a loop of 1 to 8 bars you record
+upright, acid, sub and reese), played one note at a time with glide and legato, shaped (punch, dive, four kinds of drive, a tail) and bent live; a loop of 1 to 8 bars you record
 live or step by step; a chord progression to play against, lit up on the keys; a bass arpeggiator that can fill
 the loop from the progression; and, the other way round, chord suggestions from the bass line you played.</p>
 <div class="shots">
@@ -108,10 +108,12 @@ CHORDS do, and the installer can put M-VAVE's own firmware back. Installing is a
 </table>
 
 <h2>The pages</h2>
-<p>Each page puts four values on KNOB 1–4. EDIT steps through all seven.</p>
+<p>Each page puts four values on KNOB 1–4. EDIT steps through all nine.</p>
 <ul class="pages">
   <li><b>HOME: Sound.</b> Tone, Decay, Drive, Level.</li>
+  <li><b>Shape.</b> Punch (the 808's hit), Dive time, Character (the drive's kind: Warm, Hard, Fold, Fuzz), Tail (the note drops when you let go).</li>
   <li><b>FX: Glide.</b> Glide time; Mode (Retrig, Legato, Glide all); Slide, the ENV slide's time; Dive, the 808's pitch dive (a scoop up on the others).</li>
+  <li><b>Bend.</b> Bend: turn it to bend the pitch live, half a step a detent, and it springs back; Return (how fast; Hold keeps it); Wobble and its Rate, in time with the tempo.</li>
   <li><b>SEQ: Loop.</b> Bars (1 to 8), Tempo, Swing, Click (off, while recording, always).</li>
   <li><b>SEL: Prog.</b> The progression, a chord per bar: Bar, Chord (by scale degree), 7th, and Snap (off; the scale; the bar's chord).
     The keys light up for the bar's chord, its root blinking.</li>

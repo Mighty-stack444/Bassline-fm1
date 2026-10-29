@@ -62,10 +62,14 @@ enum {
     P_ARPPAT, P_ARPRATE, P_ARPGATE, P_STEPLEN,         /* ARP (+ step entry's note length) */
     P_COUNTIN, P_MIDI, P_TUNE, P_SNAP,                 /* SETUP (+ snap, on the Prog page) */
     P_SCALE, P_ROOT, P_OCTAVE, P_SOUND,                /* the key and the sound (encoders) */
+    P_PUNCH, P_DIVETIME, P_CHAR, P_TAIL,               /* SHAPE (0.2; new ones go last: saved projects load) */
+    P_RETURN, P_WOBBLE, P_WRATE,                       /* BEND (with the bend knob itself, live) */
     P_NPARAMS
 };
 enum { MODE_RETRIG, MODE_LEGATO, MODE_GLIDEALL };
 enum { SNAP_OFF, SNAP_SCALE, SNAP_CHORD };
+enum { CHAR_WARM, CHAR_HARD, CHAR_FOLD, CHAR_FUZZ };
+#define OM_NPARAMS_V1 24                   /* the parameters 0.1 saved */
 typedef struct {
     const char *name;
     int16_t lo, hi, def;
@@ -82,6 +86,7 @@ void om_note(int note, int on, int src, int slide);   /* slide: glide into it wh
 void om_play(int on, int rec, int countin_bars);      /* start (from the loop's start) / stop */
 void om_rec(int on);                                   /* recording on / off while playing */
 void om_bend(int cents);                               /* MIDI pitch bend */
+void om_knob_bend(int cents);                          /* the Bend knob (adds to MIDI's) */
 void om_panic(void);
 
 /* the render (audio ISR): n stereo frames, 24-bit in int32; gain Q12 (the MASTER pot) */

@@ -109,7 +109,7 @@ expect plen16 4
 tap SEL
 tap EDIT
 tap EDIT
-expect view 5
+expect view 7
 expect sugdeg0 0
 expect sugdeg1 5
 shot suggest.png
@@ -119,7 +119,7 @@ expect prog0 1
 expect prog1 6
 # the Prog page: Snap to the chord; C# on bar 1 (Cm) is pulled to C
 tap SEL
-expect view 3
+expect view 5
 spin K4 2
 expect par19 2
 key 8 down
@@ -130,7 +130,7 @@ shot prog.png
 spin K4 -2
 # ---- Fill: the Arp page, Root-5th in 8ths, KNOB 4
 tap EDIT
-expect view 4
+expect view 6
 spin K1 3
 expect par12 3
 turn K4 1

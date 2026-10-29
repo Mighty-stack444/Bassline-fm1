@@ -2,7 +2,7 @@
 wait 200
 # Retrig (Glide page, KNOB 2 to the left): overlapping notes each start again
 tap FX
-expect view 1
+expect view 2
 spin K2 -1
 expect par5 0
 key 7 down
@@ -43,10 +43,9 @@ wait 2700
 expect playing 1
 expect recording 1
 # the arp, recorded: Octave pattern, 8ths, on C2 for a bar
+tap SEL
 tap EDIT
-tap EDIT
-expect view 3
-tap EDIT
+expect view 6
 spin K1 2
 expect par12 2
 key 7 down

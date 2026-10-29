@@ -10,7 +10,7 @@
 #define OM_VERSION "DEV"
 #endif
 #define PROJ_MAGIC 0x53534142u           /* "BASS" */
-#define PROJ_FORMAT 1u
+#define PROJ_FORMAT 2u                   /* 2 (0.2): the Shape and Bend parameters; a format 1 loads */
 
 typedef struct {
     uint32_t magic, format;

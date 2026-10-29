@@ -33,12 +33,39 @@ static int project_valid(void)
     return 1;
 }
 
+/* a 0.1 project (format 1): 24 parameters, then the same fields. Its parameters keep their values;
+ * the new ones (Shape, Bend) start at their defaults. */
+typedef struct {
+    uint32_t magic, format;
+    int16_t par[OM_NPARAMS_V1];
+    uint8_t prog[OM_MAXBARS];
+    uint8_t arp_last, leds, rsv[14];
+    uint32_t pat[OM_STEPS];
+} project_v1_t;
+
+static int project_migrate(void)
+{
+    static project_v1_t v1;
+    int i;
+    memcpy(&v1, &proj, sizeof v1 <= sizeof proj ? sizeof v1 : sizeof proj);
+    if (v1.magic != PROJ_MAGIC || v1.format != 1u)
+        return 0;
+    project_defaults();
+    for (i = 0; i < OM_NPARAMS_V1; i++)
+        proj.par[i] = v1.par[i];
+    memcpy(proj.prog, v1.prog, sizeof proj.prog);
+    proj.arp_last = v1.arp_last;
+    proj.leds = v1.leds;
+    memcpy(proj.pat, v1.pat, sizeof proj.pat);
+    return project_valid();
+}
+
 int project_load(void)
 {
     int n, i;
     memset(&proj, 0, sizeof proj);
     n = plat_store_load(OBJ_PROJ, &proj, sizeof proj);
-    if (!(n >= 8 && project_valid()))
+    if (!(n >= 8 && (project_valid() || project_migrate())))
         project_defaults();
     for (i = 0; i < OM_STEPS; i++)
         om_pat[i] = proj.pat[i];

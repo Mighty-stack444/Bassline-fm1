@@ -1,0 +1,64 @@
+# Bassline 0.2: Shape and Bend. The 808: punch, dive time, character, tail; the Bend knob springs back
+wait 100
+turn PRESET -1
+expect par23 0
+# Shape (EDIT from Sound): Punch +12, Dive time long, Character Fold, Tail -12
+tap EDIT
+expect view 1
+spin K1 8
+expect par24 12
+spin K2 30
+expect par25 60
+spin K3 2
+expect par26 2
+spin K4 12
+expect par27 12
+shot shape.png
+# Sound: some drive, for the fold to show
+tap HOME
+spin K3 40
+tap FX
+spin K4 12
+expect par7 12
+peakreset
+wav 808_shaped.wav
+key 7 down
+wait 900
+key 7 up
+wait 700
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -20
+# Bend (EDIT from Glide): the knob bends, and springs back over Return
+tap EDIT
+expect view 3
+key 7 down
+wait 30
+turn K1 4 10
+expect note 36
+wait 10
+shot bend.png
+wait 1500
+key 7 up
+# Return 0: Hold, the bend stays
+spin K2 -20
+expect par28 0
+# wobble 1/8
+spin K3 60
+expect par29 60
+key 7 down
+wav 808_wobble.wav
+wait 1200
+wavstop
+key 7 up
+wait 300
+# every character, with drive, stays in range
+tap SEL
+tap EDIT
+tap EDIT
+tap EDIT
+tap EDIT
+tap EDIT
+expect view 1
+spin K3 -2
+expect par26 0

@@ -10,16 +10,20 @@
  *                  step entry: LFO a rest, ENV a tie, ENV held with a key a slide
  *   ARP            the bass arpeggiator on / off
  *   OCT- / OCT+    the octave          SELECT scale (step entry: the cursor)  ALGORITHM root  PRESETS sound
- *   HOME FX SEQ SEL GLO   pages SOUND, GLIDE, LOOP, PROG, SETUP; EDIT steps through all seven
+ *   HOME FX SEQ SEL GLO   pages SOUND, GLIDE, LOOP, PROG, SETUP; EDIT steps through all nine (with
+ *                  SHAPE, BEND, ARP, SUGGEST). BEND's KNOB 1 bends the pitch live and springs back
  *   KNOB 1-4       the page's four values
  *   SAVE           saves (it also saves by itself when the loop is stopped and nothing is touched) */
 
-enum { V_SOUND, V_GLIDE, V_LOOP, V_PROG, V_ARP, V_SUGGEST, V_SETUP, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Sound", "Glide", "Loop", "Prog", "Arp", "Suggest", "Setup"};
-enum { K_BAR = 100, K_CHORD, K_SEVENTH, K_FILL, K_SBAR, K_SPICK, K_APPLY, K_LEDS, K_NONE };
+enum { V_SOUND, V_SHAPE, V_GLIDE, V_BEND, V_LOOP, V_PROG, V_ARP, V_SUGGEST, V_SETUP, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Sound", "Shape", "Glide", "Bend", "Loop", "Prog", "Arp", "Suggest",
+                                              "Setup"};
+enum { K_BAR = 100, K_CHORD, K_SEVENTH, K_FILL, K_SBAR, K_SPICK, K_APPLY, K_LEDS, K_BEND, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_TONE, P_DECAY, P_DRIVE, P_LEVEL},
+    {P_PUNCH, P_DIVETIME, P_CHAR, P_TAIL},
     {P_GLIDE, P_MODE, P_SLIDE, P_DIVE},
+    {K_BEND, P_RETURN, P_WOBBLE, P_WRATE},
     {P_BARS, P_TEMPO, P_SWING, P_METRO},
     {K_BAR, K_CHORD, K_SEVENTH, P_SNAP},
     {P_ARPPAT, P_ARPRATE, P_ARPGATE, K_FILL},
@@ -55,6 +59,9 @@ static struct {
     uint32_t undo[OM_STEPS];
     uint8_t undo_ok;
     uint8_t prog_bar, sug_bar, sug_pick;
+    float kbend;                              /* the Bend knob, semitones */
+    int16_t kbend_sent;                       /* cents last sent */
+    uint32_t kbend_t, kbend_tick;             /* last turned; last frame it moved back */
     uint32_t lfo_t;                           /* LFO went down (held 1.5 s: clear) */
     uint8_t lfo_cleared;
     int8_t last_note;
@@ -401,6 +408,7 @@ static int knob_get(int k)
     case K_SBAR: return ui.sug_bar;
     case K_SPICK: return ui.sug_pick;
     case K_LEDS: return proj.leds;
+    case K_BEND: return (int)(ui.kbend * 2.0f + (ui.kbend < 0.0f ? -0.5f : 0.5f));
     default: return 0;
     }
 }
@@ -418,6 +426,7 @@ static void knob_range(int k, int *lo, int *hi)
     case K_SEVENTH: *hi = 1; break;
     case K_SPICK: *hi = 2; break;
     case K_LEDS: *hi = 2; break;
+    case K_BEND: *lo = -24; *hi = 24; break;
     default: *hi = 0; break;
     }
 }
@@ -433,6 +442,7 @@ static const char *knob_name(int k)
     case K_SPICK: return "Pick";
     case K_APPLY: return "Use";
     case K_LEDS: return "Lights";
+    case K_BEND: return "Bend";
     default: return "";
     }
 }
@@ -457,6 +467,16 @@ static void knob_text(int k, char *b)
     case K_SPICK: itoa_u((uint32_t)v + 1u, b); break;
     case K_APPLY: scpy(b, "+bar -all"); break;
     case K_LEDS: scpy(b, v == 2 ? "Scale" : v ? "Chord" : "Off"); break;
+    case K_BEND: {                           /* half steps: "+2.5" */
+        int a = v < 0 ? -v : v;
+        char t[8];
+        scpy(b, v > 0 ? "+" : v < 0 ? "-" : "");
+        itoa_u((uint32_t)(a / 2), t);
+        scat_(b, t);
+        if (a & 1)
+            scat_(b, ".5");
+        break;
+    }
     default: break;
     }
 }
@@ -534,6 +554,12 @@ static void turn(int role, int k, int32_t e)
     int lo, hi;
     if (!e || k == K_NONE)
         return;
+    if (k == K_BEND) {                       /* a half step a detent, up to an octave either way */
+        ui.kbend += 0.5f * (float)e;
+        ui.kbend = ui.kbend > 12.0f ? 12.0f : ui.kbend < -12.0f ? -12.0f : ui.kbend;
+        ui.kbend_t = plat_ms();
+        return;
+    }
     if (k == K_FILL) {                       /* action knobs: a turn does it */
         if (e > 0) {
             fill_loop();
@@ -1065,7 +1091,7 @@ static void draw_knobs(void)
 static void leds(void)
 {
     uint32_t b = 0, k = 0, i;
-    static const int8_t VIEW_BTN[NVIEWS] = {B_HOME, B_FX, B_SEQ, B_SEL, -1, -1, B_GLO};
+    static const int8_t VIEW_BTN[NVIEWS] = {B_HOME, -1, B_FX, -1, B_SEQ, B_SEL, -1, -1, B_GLO};
     int blink = (ui.frame / 10u) & 1u;
     b |= VIEW_BTN[ui.view] >= 0 ? 1u << VIEW_BTN[ui.view] : 1u << B_EDIT;
     if (om_counting)
@@ -1119,9 +1145,30 @@ void ui_init(void)
     lcd_fill(0, 0, 240, 240, K_BG);
 }
 
+/* the Bend knob springs back to 0 once it is left alone, over Return (Hold: it stays) */
+static void bend_spring(void)
+{
+    uint32_t now = plat_ms();
+    int ret = proj.par[P_RETURN], c;
+    if (ui.kbend != 0.0f && ret && now - ui.kbend_t > 120u) {
+        float f = (float)ret * 0.01f, t = 0.03f + 2.0f * f * f, dt = (float)(now - ui.kbend_tick) * 0.001f;
+        float k = dt * 3.0f / t;
+        ui.kbend -= ui.kbend * (k > 1.0f ? 1.0f : k);
+        if (ui.kbend > -0.02f && ui.kbend < 0.02f)
+            ui.kbend = 0.0f;
+    }
+    ui.kbend_tick = now;
+    c = (int)(ui.kbend * 100.0f);
+    if (c != ui.kbend_sent) {
+        ui.kbend_sent = (int16_t)c;
+        om_knob_bend(c);
+    }
+}
+
 void ui_frame(void)
 {
     input();
+    bend_spring();
     autosave();
     draw_header();
     draw_main();
